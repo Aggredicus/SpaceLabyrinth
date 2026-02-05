@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Space Labyrinth: Orbitfall</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="panel banner">
+        <h1>SPACE LABYRINTH // ORBITFALL</h1>
+        <p>
+          Enter the orbital megadungeon as a Space Knight. Survive a run, evolve your legacy,
+          and return stronger.
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="panel left-column">
+          <h2>Command Uplink</h2>
+          <form id="start-form" class="start-form">
+            <label for="class-select">Class Protocol</label>
+            <select id="class-select" name="class-select"></select>
+
+            <label for="aim-select">Mission Aim</label>
+            <select id="aim-select" name="aim-select"></select>
+
+            <button type="submit" id="launch-button">Launch New Run</button>
+          </form>
+
+          <div class="meta-grid">
+            <div>
+              <span class="meta-label">Runs Completed</span>
+              <strong id="meta-runs">0</strong>
+            </div>
+            <div>
+              <span class="meta-label">Legacy Cores</span>
+              <strong id="meta-cores">0</strong>
+            </div>
+            <div>
+              <span class="meta-label">Power Tier</span>
+              <strong id="meta-tier">1</strong>
+            </div>
+          </div>
+
+          <div class="hint-box">
+            <p>
+              Every run grants Legacy Cores. Cores permanently boost all future characters.
+              Choose classes and mission goals to discover unique encounters.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel center-column">
+          <h2>Satellite Feed</h2>
+          <pre id="art-screen" aria-live="polite"></pre>
+          <div class="stats" id="stats"></div>
+        </section>
+
+        <section class="panel right-column">
+          <h2>Event Console</h2>
+          <div id="log" class="log" aria-live="polite"></div>
+          <div id="choices" class="choices"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
