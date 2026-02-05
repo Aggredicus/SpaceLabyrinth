@@ -238,7 +238,68 @@ const eventDeck = [
       },
     ],
   },
+  {
+    id: "wraith_train",
+    title: "Zero-G Wraith Train",
+    scene: "start",
+    text:
+      "A phantom mag-rail carriage drifts through vacuum tunnels. Its passengers are dead knights repeating their final boarding call.",
+    choices: [
+      {
+        label: "Board and duel the conductor's shade",
+        effect: (state) => resolveCombat(state, 14, 4, { cores: 2, resolve: 1 }),
+      },
+      {
+        label: "Sync your suit beacon to the route AI",
+        effect: (state) => techCheck(state, 7, "You inherit hidden rail vectors and bypass two kill-zones.", { depth: 1, cores: 1 }),
+      },
+      {
+        label: "Honor the dead; offer a memory shard",
+        effect: (state) => {
+          state.resolve += 2;
+          state.attack -= 1;
+          log("The ghosts salute. Your certainty strengthens as aggression cools.", "system");
+        },
+      },
+    ],
+  },
+  {
+    id: "forge",
+    title: "The Proto-Forge of Saint Argon",
+    scene: "vault",
+    text:
+      "An automated forge requests a litany from old Earth orders. It can reforge your armament once, but the process is unstable.",
+    choices: [
+      {
+        label: "Reforge into a phase-lance (+3 attack, -1 resolve)",
+        effect: (state) => {
+          state.attack += 3;
+          state.resolve = Math.max(1, state.resolve - 1);
+          log("Your weapon refracts through dimensions and thirsts for decisive conflict.", "warning");
+        },
+      },
+      {
+        label: "Install guardian runes (+3 max hp, heal 2)",
+        effect: (state) => {
+          state.maxHp += 3;
+          state.hp = Math.min(state.maxHp, state.hp + 2);
+          log("Runic plating seals over your armor seams.", "success");
+        },
+      },
+      {
+        label: "Donate cores to bless future incarnations (-2 run cores, +legacy)",
+        requirement: (state) => state.cores >= 2,
+        effect: (state) => {
+          state.cores -= 2;
+          state.bonusLegacy += 2;
+          log("The forge brands your lineage. Future runs will remember this sacrifice.", "success");
+        },
+      },
+    ],
+  },
 ];
+
+const eventMap = Object.fromEntries(eventDeck.map((event) => [event.id, event]));
 
 const metaDefaults = {
   runs: 0,
@@ -270,11 +331,11 @@ form.addEventListener("submit", (event) => {
 
 function populateSelects() {
   classSelect.innerHTML = classes
-    .map((c) => `<option value="${c.id}">${c.name} — ${c.description}</option>`)
+    .map((rpgClass) => `<option value="${rpgClass.id}">${rpgClass.name} — ${rpgClass.description}</option>`)
     .join("");
 
   aimSelect.innerHTML = aims
-    .map((a) => `<option value="${a.id}">${a.name} — ${a.description}</option>`)
+    .map((aim) => `<option value="${aim.id}">${aim.name} — ${aim.description}</option>`)
     .join("");
 }
 
@@ -288,7 +349,11 @@ function loadMeta() {
 }
 
 function saveMeta() {
-  localStorage.setItem(metaKey, JSON.stringify(meta));
+  try {
+    localStorage.setItem(metaKey, JSON.stringify(meta));
+  } catch {
+    log("Unable to persist metaprogression in this browser session.", "warning");
+  }
 }
 
 function renderMeta() {
@@ -298,16 +363,22 @@ function renderMeta() {
 }
 
 function renderIdleState() {
+  runState = null;
   artScreen.textContent = asciiScenes.start;
-  statsNode.innerHTML = `<p>Select a class and mission aim to begin a new incursion.</p>`;
+  statsNode.innerHTML = "<p>Select a class and mission aim to begin a new incursion.</p>";
   choiceNode.innerHTML = "";
 }
 
 function startRun(classId, aimId) {
-  const selectedClass = classes.find((c) => c.id === classId);
-  const selectedAim = aims.find((a) => a.id === aimId);
+  const selectedClass = classes.find((rpgClass) => rpgClass.id === classId);
+  const selectedAim = aims.find((aim) => aim.id === aimId);
+  if (!selectedClass || !selectedAim) {
+    log("Invalid launch parameters. Select a class and mission and try again.", "danger");
+    return;
+  }
+
   const entrance = entrances[Math.floor(Math.random() * entrances.length)];
-  const tierBonus = meta.powerTier - 1;
+  const tierBonus = Math.max(0, meta.powerTier - 1);
 
   runState = {
     classId,
@@ -324,6 +395,7 @@ function startRun(classId, aimId) {
     cores: 0,
     pilgrimsSaved: 0,
     humanityLost: false,
+    bonusLegacy: 0,
     shieldReady: selectedClass.id === "vanguard",
     canForkChoice: selectedClass.id === "cipher",
     regen: selectedClass.id === "starseer",
@@ -356,16 +428,19 @@ function nextEvent() {
   }
 
   runState.depth += 1;
+  if (runState.classId === "vanguard") {
+    runState.shieldReady = true;
+  }
 
   const weightedEvents = [...eventDeck];
-  if (runState.aimId === "sovereign") {
-    weightedEvents.push(eventDeck.find((e) => e.id === "throne"));
+  if (runState.aimId === "sovereign" && eventMap.throne) {
+    weightedEvents.push(eventMap.throne);
   }
-  if (runState.aimId === "pilgrim") {
-    weightedEvents.push(eventDeck.find((e) => e.id === "pilgrims"));
+  if (runState.aimId === "pilgrim" && eventMap.pilgrims) {
+    weightedEvents.push(eventMap.pilgrims);
   }
-  if (runState.aimId === "core") {
-    weightedEvents.push(eventDeck.find((e) => e.id === "echo_market"));
+  if (runState.aimId === "core" && eventMap.echo_market) {
+    weightedEvents.push(eventMap.echo_market);
   }
 
   const event = weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
@@ -375,7 +450,7 @@ function nextEvent() {
 function showEvent(event) {
   artScreen.textContent = asciiScenes[event.scene] || asciiScenes.start;
   log(`== ${event.title} ==`, "system");
-  log(event.text, "");
+  log(event.text);
 
   const availableChoices = event.choices.filter((choice) => !choice.requirement || choice.requirement(runState));
   if (runState.canForkChoice && availableChoices.length >= 2) {
@@ -395,7 +470,9 @@ function showEvent(event) {
     const btn = document.createElement("button");
     btn.textContent = `${index + 1}. ${choice.label}`;
     btn.addEventListener("click", () => {
+      lockChoices();
       choice.effect(runState);
+      normalizeState(runState);
       if (runState.regen && runState.hp > 0) {
         runState.hp = Math.min(runState.maxHp, runState.hp + 1);
         log("Starseer grace restores 1 HP.", "success");
@@ -407,6 +484,20 @@ function showEvent(event) {
   });
 
   renderStats();
+}
+
+function lockChoices() {
+  choiceNode.querySelectorAll("button").forEach((button) => {
+    button.disabled = true;
+  });
+}
+
+function normalizeState(state) {
+  state.hp = Math.min(state.maxHp, state.hp);
+  state.cores = Math.max(0, state.cores);
+  state.attack = Math.max(1, state.attack);
+  state.tech = Math.max(1, state.tech);
+  state.resolve = Math.max(1, state.resolve);
 }
 
 function resolveCombat(state, enemyHp, enemyDamage, reward = { cores: 2 }) {
@@ -421,7 +512,7 @@ function resolveCombat(state, enemyHp, enemyDamage, reward = { cores: 2 }) {
   const enemyPower = enemyHp + roll(4);
 
   if (playerPower >= enemyPower) {
-    state.cores += reward.cores || 0;
+    applyRewards(state, reward);
     log("You overwhelm the hostile with decisive strikes.", "success");
   } else {
     state.hp -= effectiveDamage;
@@ -462,9 +553,20 @@ function concludeRun(victory, narrative) {
   artScreen.textContent = asciiScenes.extract;
   log(narrative, victory ? "success" : "danger");
 
-  const coreReward = runState.cores + Math.floor(runState.depth / 2) + (victory ? 3 : 1);
+  let coreReward = runState.cores + Math.floor(runState.depth / 2) + (victory ? 3 : 1) + runState.bonusLegacy;
+  if (runState.aimId === "core") {
+    coreReward += 2;
+  }
+  if (runState.aimId === "pilgrim") {
+    coreReward += Math.floor(runState.pilgrimsSaved / 2);
+  }
+  if (runState.aimId === "sovereign" && runState.humanityLost) {
+    coreReward += 2;
+  }
+  coreReward = Math.max(1, coreReward);
+
   meta.runs += 1;
-  meta.cores += Math.max(1, coreReward);
+  meta.cores += coreReward;
   meta.bestDepth = Math.max(meta.bestDepth, runState.depth);
   meta.powerTier = 1 + Math.floor(meta.cores / 10);
   saveMeta();

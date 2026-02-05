@@ -12,7 +12,8 @@ A retro-styled, replayable **space-knight roguelike** set inside an enormous sat
 - Mission aims that alter encounter weighting and roleplay outcomes.
 - Procedural entrance selection and randomized event chains.
 - Persistent metaprogression with **Legacy Cores** stored in localStorage.
-- Branching, narrative-heavy encounter scripts with combat, tech checks, and resolve checks.
+- Branching, narrative-heavy encounter scripts with combat, tech checks, resolve checks, and aim-specific rewards.
+- Additional handcrafted encounters (e.g. Zero-G Wraith Train, Proto-Forge) for richer run variety.
 
 ## Run locally
 
